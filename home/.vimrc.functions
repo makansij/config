@@ -1,0 +1,400 @@
+" ListToggle {{{
+function! ListToggle()
+    if !&list
+        let b:temp_conceallevel=&conceallevel
+        setlocal list
+        setlocal conceallevel=0
+    else
+        set nolist
+        if exists("b:temp_conceallevel")
+            let &conceallevel=b:temp_conceallevel
+        endif
+    endif
+endfunction
+"}}}
+" Markdownpreview/compile{{{
+function! MarkdownPreview()
+  silent execute '!chromium --app=file://'.expand("%:p").' >/dev/null 2>&1'
+  redraw!
+endfunction
+function! MarkdownCompile()
+  let l:in = expand("%:p")
+  let l:out = expand("%:p:r").".html"
+  "silent execute '!markdown --html4tags '.l:in.' >'.l:out.' 2>/dev/null'
+  silent execute '!marked -gfm '.l:in.' -o '.l:out
+  "let l:prepend = '<meta http-equiv="refresh" content="1" />'
+  "silent execute "!echo '".l:prepend."'|cat - ".l:out." > /tmp/out && mv /tmp/out ".l:out
+  let l:prepend = '<link rel="stylesheet" type="text/css" href="https://gist.github.com/andyferra/2554919/raw/"><meta http-equiv="content-type" content="text/html; charset=UTF-8" />'
+  silent execute "!echo '".l:prepend."'|cat - ".l:out." > /tmp/out && mv /tmp/out ".l:out
+  "silent execute '!chromium --app=file://'.l:out.' >/dev/null 2>&1'
+  redraw!
+  echo "converted file to:".l:out
+endfunction
+"}}}
+" ToggleExternalCommand{{{
+function! ToggleExternalCommand(command)
+  "TODO expand env variables e,g, ~
+  "echom fnamemodify(a:command, ":p")
+  if system('pgrep -cf "'.a:command.'"') > 1
+    "echom 'killing command'
+    silent execute '!pkill -f "'.a:command.'"'
+  else
+    silent execute '!'.a:command.' >/dev/null 2>&1 &'
+  endif
+  redraw!
+endfunction
+"}}}
+
+" LatexPreview {{{
+function! SetMainLatexFile()
+  "let l:tex_root = findfile(".texroot", getcwd())
+  let l:tex_root = findfile(".texroot", expand("%:p:h").";")
+  if empty(l:tex_root)
+    "assuming the file being edited is the main file
+    let b:latex_preview_main_file = expand("%:p")
+    return
+  endif
+  let l:tex_root = fnamemodify(l:tex_root, ":p:h")
+  echom l:tex_root
+  let l:main_file = split(globpath(l:tex_root, '*.tex'), '\n')
+  echo l:main_file
+  if len(l:main_file) > 1
+    echoerr "multiple files in texroot, choosing first one :)"
+  elseif empty(l:main_file)
+    echoerr "no tex file in texroot"
+    return
+  endif
+  let b:latex_preview_main_file = l:main_file[0]
+endfunction
+function! KillLatexPreview()
+  silent execute '!pkill -f "'.b:latex_continous_compile_command.'"'
+  silent execute '!pkill -f "'.b:latex_preview_command.'"'
+  silent execute "!".b:latex_clean_command." >/dev/null 2>&1 &"
+endfunction
+function! ShowEvince()
+    silent execute "!".b:latex_pdfinfo_command.
+                \" >/dev/null 2>&1"
+    redraw!
+    if v:shell_error
+        sleep 1000m
+        silent execute "!".b:latex_pdfinfo_command.
+                    \" >/dev/null 2>&1"
+        redraw!
+    endif
+    if v:shell_error
+        let b:latex_pdf_error = 1
+        echoerr "pdf not valid ".
+                    \"please rerun to retry starting viewer"
+        return 1
+    endif
+    silent execute "!".b:latex_preview_command." >/dev/null 2>&1 &"
+    let b:latex_pdf_error = 0
+    redraw!
+endfunction
+function! ToggleLatexPreview()
+    call SetMainLatexFile()
+    if !exists("b:latex_preview_main_file")
+        echoerr "main tex file undefined, aborting"
+        return
+    endif
+    if !exists("b:latex_pdf_error") | let b:latex_pdf_error = 0 | endif
+    if !exists("b:latex_continous_compile_command")
+        let b:latex_continous_compile_command =
+                    \"latexmk -pdf -pvc ".b:latex_preview_main_file
+    endif
+    if !exists("b:latex_preview_command")
+        let b:latex_preview_command = "evince ".
+                    \ fnamemodify(b:latex_preview_main_file, ":p:r").".pdf"
+    endif
+    if !exists("b:latex_pdfinfo_command")
+        let b:latex_pdfinfo_command = "pdfinfo ".
+                    \ fnamemodify(b:latex_preview_main_file, ":p:r").".pdf"
+    endif
+    if !exists("b:latex_clean_command")
+        let b:latex_clean_command = "latexmk -c "
+    endif
+    augroup latex_preview
+        autocmd!
+        au BufWinLeave <buffer> call KillLatexPreview()
+    augroup end
+    if b:latex_pdf_error | call ShowEvince() | return | endif
+    if system('pgrep -cf "'.b:latex_continous_compile_command.'"') > 1
+        call KillLatexPreview()
+        redraw!
+        return
+    else
+        let oldpath = getcwd()
+        execute "cd " . fnamemodify(b:latex_preview_main_file, ":p:h")
+        silent execute "!".b:latex_continous_compile_command.
+                    \" >/dev/null 2>&1 &"
+        execute "cd " . oldpath
+        call ShowEvince()
+    endif
+endfunction
+"}}}
+" Movetoprevnexttab{{{
+function! MoveToPrevTab()
+  "there is only one window
+  if tabpagenr('$') == 1 && winnr('$') == 1
+    return
+  endif
+  "preparing new window
+  let l:tab_nr = tabpagenr('$')
+  let l:cur_buf = bufnr('%')
+  if tabpagenr() != 1
+    close!
+    if l:tab_nr == tabpagenr('$')
+      tabprev
+    endif
+    sp
+  else
+    close!
+    exe "0tabnew"
+  endif
+  "opening current buffer in new window
+  exe "b".l:cur_buf
+endfunc
+function! MoveToNextTab()
+  "there is only one window
+  if tabpagenr('$') == 1 && winnr('$') == 1
+    return
+  endif
+  "preparing new window
+  let l:tab_nr = tabpagenr('$')
+  let l:cur_buf = bufnr('%')
+  if tabpagenr() < tab_nr
+    close!
+    if l:tab_nr == tabpagenr('$')
+      tabnext
+    endif
+    sp
+  else
+    close!
+    tabnew
+  endif
+  "opening current buffer in new window
+  exe "b".l:cur_buf
+endfunc
+"}}}
+" PreserveCursorPosition{{{
+function! Preserve(command)
+  " Preparation: save last search, and cursor position.
+  let _s=@/
+  let l = line(".")
+  let c = col(".")
+  " Do the business:
+  execute a:command
+  " Clean up: restore previous search history, and cursor position
+  let @/=_s
+  call cursor(l, c)
+endfunction
+"}}}
+function! TrimEndLines() "{{{
+    let save_cursor = getpos(".")
+    :silent! %s#\($\n\s*\)\+\%$##
+    call setpos('.', save_cursor)
+endfunction
+"}}}
+function! StripTrailingWhitespaces() "{{{
+    " Preparation: save last search, and cursor position.
+    let _s=@/
+    let l = line(".")
+    let c = col(".")
+    " Do the business:
+    %s/\s\+$//e
+    " Clean up: restore previous search history, and cursor position
+    let @/=_s
+    call cursor(l, c)
+endfunction
+"}}}
+function! ToggleBetweenHeaderAndSourceFile() "{{{
+  let bufname = bufname("%")
+  let ext = fnamemodify(bufname, ":e")
+  if ext == "h"
+    let ext = "cpp"
+  elseif ext == "cpp"
+    let ext = "h"
+  else
+    return
+  endif
+  let bufname_new = fnamemodify(bufname, ":r") . "." . ext
+  let bufname_alt = bufname("#")
+  if bufname_new == bufname_alt
+    execute ":e#"
+  else
+    execute ":e " . bufname_new
+  endif
+endfunction"}}}
+function! ToggleEncoding() "{{{
+  if &encoding == "latin1"
+    set encoding=utf-8
+  elseif &encoding == "utf-8"
+    set encoding=latin1
+  endif
+endfunction
+"}}}
+function! InsertHeaderGuard() "{{{
+  let filename = substitute(toupper(expand("%:t")), "\\.", "_", "g")
+  let foldername = substitute(toupper(expand("%:p:h:t")), "-", "_", "g")
+  execute "normal! i#ifndef " . foldername . "_" . filename . "_"
+  execute "normal! o#define " . foldername . "_" . filename . "_"
+  execute "normal! Go#endif  // " . foldername . "_" . filename . "_"
+  normal! kk
+endfunction
+"}}}
+function! Refactor() "{{{
+  "" needed for Refactor mapping
+  call inputsave()
+  let @z=input("What do you want to rename '" . @z . "' to? ")
+  call inputrestore()
+endfunction
+"}}}
+" Execute a selection of python code."{{{
+" Use VISUAL to select a range and use ":py EvaluateCurrentRange" to execute it.
+if has("python")
+python << EOL
+import vim, StringIO, sys
+def EvaluateCurrentRange():
+    eval(compile('\n'.join(vim.current.range),'','exec'),globals())
+def PyExecReplace(line1,line2):
+    r = vim.current.buffer.range(int(line1),int(line2))
+    redirected = StringIO.StringIO()
+    sys.stdout = redirected
+    exec('\n'.join(r) + '\n')
+    sys.stdout = sys.__stdout__
+    output = redirected.getvalue().split('\n')
+    r[:] = output[:-1] # the -1 is to remove the final blank line
+    redirected.close()
+EOL
+command! -range Pyer python PyExecReplace(<f-line1>,<f-line2>)
+endif
+"}}}
+function! RenameFile() "{{{
+    let old_name = expand('%')
+    let new_name = input('New file name: ', expand('%'), 'file')
+    if new_name != '' && new_name != old_name
+        exec ':saveas ' . new_name
+        exec ':silent !rm ' . old_name
+        redraw!
+    endif
+endfunction
+"}}}
+" custom popup menu "{{{
+function! Popupmenu()
+  echohl Title
+  echo 'Code fragments:'
+  echohl None
+  echo '1. foo'
+  echo '2. bar'
+  let choice = nr2str(getchar())
+  if choice == 1
+    echo 'choice 1'
+  endif
+  if choice == 2
+    echo 'choice 2'
+  endif
+endfunction
+
+inoremap <F6> <C-R>=CustomComplete()<CR>
+
+func! CustomComplete()
+        echom 'move to start of last word'
+        normal b
+        echom 'select word under cursor'
+        let b:word = expand('<cword>')
+        echom '->'.b:word.'<-'
+        echom 'save position'
+        let b:position = col('.')
+        echom '->'.b:position.'<-'
+        normal e
+        normal l
+        echom 'move to end of word'
+
+        let b:list = ["spoogle","spangle","frizzle"]
+        let b:matches = []
+
+
+        echom 'begin checking for completion'
+        for item in b:list
+        echom 'checking '
+        echom '->'.item.'<-'
+                if(match(item,'^'.b:word)==0)
+                echom 'adding to matches'
+                echom '->'.item.'<-'
+                call add(b:matches,item)
+                endif
+        endfor
+        call complete(b:position, b:matches)
+        return ''
+endfunc
+"}}}
+function! ShowFMappings() "{{{
+        :map <F1>
+        :map <F2>
+        :map <F3>
+        :map <F4>
+        :map <F5>
+        :map <F6>
+        :map <F7>
+        :map <F8>
+        :map <F9>
+        :map <F10>
+        :map <F11>
+        :map <F12>
+endfunc
+"}}}
+" Resize Windows {{{
+function! Resize(dir)
+    if ('+' == a:dir && IsWinOnPosition('bottom')) || ('-' == a:dir && IsWinOnPosition('top'))
+        exe "wincmd +"
+    elseif ('-' == a:dir && IsWinOnPosition('bottom')) || ('+' == a:dir && IsWinOnPosition('top'))
+        exe "wincmd -"
+    elseif ('<' == a:dir && IsWinOnPosition('left')) || ('>' == a:dir && IsWinOnPosition('right'))
+        exe "wincmd <"
+    elseif ('>' == a:dir && IsWinOnPosition('left')) || ('<' == a:dir && IsWinOnPosition('right'))
+        exe "wincmd >"
+    else
+        if (a:dir == '+')
+            exe "wincmd -"
+        elseif (a:dir == '-')
+            exe "wincmd +"
+        elseif (a:dir == '>')
+            exe "wincmd >"
+        elseif (a:dir == '<')
+            exe "wincmd <"
+        endif
+    endif
+endfunction
+function! IsWinOnPosition(position) " position can be left, right, top or bottom
+    let save_layout = winsaveview()
+    let save_winnr = winnr()
+    if a:position ==? "right"
+      silent! wincmd l " switch to window on the right
+    elseif a:position ==? "left"
+      silent! wincmd h
+    elseif a:position ==? "top"
+      silent! wincmd k
+    elseif a:position ==? "bottom"
+      silent! wincmd j
+    endif
+    if winnr() == save_winnr " check if winnr changed
+      return 1
+    endif
+    " restore window
+    exe save_winnr . "wincmd w"
+    call winrestview(save_layout)
+    return 0
+endfunction
+"}}}
+" Fix undo file {{{
+function! FixUndoFile(dir)
+    exe ":wundo! " escape(undofile(@%), '%')
+endfunction
+"}}}
+" dos2unix {{{
+function! Dos2Unix()
+    set fileformat=unix
+    set fileencoding=utf-8
+    set encoding=utf-8
+endfunction
+"}}}

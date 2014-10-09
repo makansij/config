@@ -1,0 +1,53 @@
+#!/usr/bin/env python
+
+"""File downloading from the web.
+"""
+import httplib
+
+def get(url):
+  """Copy the contents of a file from a given URL
+  to a local file.  """
+  conn = httplib.HTTPConnection(url)
+  conn.request("GET", "/index.html")
+  resp = conn.getresponse()
+  print resp.status, resp.reason
+  data = resp.read()
+  conn.close()
+  return data
+#localFile = open(url.split('/')[-1], 'w'
+#localFile.write(webFile.read())
+#webFile.close()
+#localFile.close()
+
+def downRegex(url, regex):
+  import urllib
+  connection = urllib.urlopen(url)
+
+if __name__ == '__main__':
+	import sys
+	if len(sys.argv) == 2:
+		try:
+			print get('www.google.de')
+		except IOError:
+			print 'Filename not found.'
+	else:
+		import os
+		print 'usage: %s http://server.com/path/to/filename' % os.path.basename(sys.argv[0])
+"""
+#!/bin/sh -vx
+
+workingdir=`pwd`
+# SWT
+dir='/Dropbox/UNI/Softwaretechnik'
+dllink='http://proglang.informatik.uni-freiburg.de/teaching/swt/2012/'
+cd $HOME$dir
+wget -rnd -nv -A '*.pdf' --no-parent $dllink
+cd $workingdir
+
+# c++
+dir='/Dropbox/UNI/cplusplus'
+dllink='http://proglang.informatik.uni-freiburg.de/teaching/swt/2012/'
+cd $HOME$dir
+wget -rnd -nv -A 'uebungsblatt*.pdf' --no-parent $dllink
+cd $workingdir
+"""

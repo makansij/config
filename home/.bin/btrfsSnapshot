@@ -1,0 +1,19 @@
+#! /bin/bash
+sudo btrfs fi df / | grep Data
+sudo mount -o defaults,discard,noatime,ssd /dev/sdb2 /mnt/btrfs-root
+cd /mnt/btrfs-root
+
+sudo btrfs subvolume delete __snapshot/last_good/__active/usr
+sudo btrfs subvolume delete __snapshot/last_good/__active/var
+sudo btrfs subvolume delete __snapshot/last_good/__active
+
+sudo btrfs subvolume snapshot __active __snapshot/last_good/__active
+sudo rmdir __snapshot/last_good/__active/usr/
+sudo btrfs subvolume snapshot __active/usr/ __snapshot/last_good/__active/usr
+sudo rmdir __snapshot/last_good/__active/var/
+sudo btrfs subvolume snapshot __active/var/ __snapshot/last_good/__active/var
+
+cd /
+sudo umount /mnt/btrfs-root
+
+sudo btrfs fi df / | grep Data

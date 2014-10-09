@@ -1,0 +1,10 @@
+#! /bin/bash
+#if [ $(ps aux | grep -e 'process_name$' | grep -v grep | wc -l | tr -s "\n") -eq 0 ]; then 
+#  process_name; 
+#fi
+#if [ $(ps aux | grep $1 | grep -v grep | wc -l | tr -s "\n") -eq 0 ]; then 
+#  $*;
+#fi
+# Run program unless it's already running.
+pgrep $1 > /dev/null || ($@ &)
+

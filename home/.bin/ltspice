@@ -1,0 +1,2 @@
+#!/bin/bash
+wine "/home/h4ct1c/.wine/drive_c/Program Files (x86)/LTC/LTspiceIV/scad3.exe"

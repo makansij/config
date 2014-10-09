@@ -1,0 +1,341 @@
+#!/bin/bash
+#
+# Batch downloader using uzblctrl
+# Copyright (c) 2009, James Cline <james.cline@gatech.edu>, Rodya on Freenode
+#	Feel free to share and edit this script, but please include my name.
+# 
+# Usage:
+# batch_download.sh REGEX [OPTIONS]...
+#	--ask		displays file select dialog to select directory to save file(s)
+#	--clip		copy URIs to clipboard
+#	--clobber	download duplicate files
+#			defaults to false
+#			does not overwrite files, renames them
+#	--confirm	display list of URIs with checkboxes for selection using zenity
+#	--dir=		set the directory to save files to (--export, --download)
+#	--download	downloads selected URIs with wget
+#	--export	save text file of URIs
+#	--export-as=	filename to use when exporting
+#	--export-append	add to file rather than overwriting
+#	--no-cookies	disable wget's usage of your cookies.txt
+#
+# Option order does not matter, except REGEX must be the first.
+#
+# Displays a message on completion in the MSG field of your status bar in the spawning
+# uzbl instance, as well as error messages upon failure. To clear the field afterward, 
+# 'set status_message = ', anything which updates the status_message field will, of
+# course overwrite it. Exiting the spawning uzbl instance after downloads begin will
+# not cause the downloads to fail, as uzblctrl return values are not checked after
+# the essential ones have been run.
+#
+# Dependencies:
+#	bash
+#	uzbl
+#	uzblctrl
+#	wget
+#	xclip
+#	zenity
+#
+# uzbl Configuration Examples:
+# To download all links with a given regex using a hotkey:
+#	bind download _ = spawn $XDG_DATA_HOME/uzbl/scripts/batch_download.sh %s
+#		--download
+#	To use:
+#		download <regex>
+#
+# To download all links with a given regex to $HOME/Downloads and ask for
+# confirmation using a hotkey:
+#	bind download _ = spawn $XDG_DATA_HOME/uzbl/scripts/batch_download.sh %s 
+#		--download --dir=$HOME/Downloads --confirm
+#	To use:
+#		download <regex>
+#		Select URIs to download, select OK (Cancel cancels the downloads)
+#
+# To download all links with the pattern torrent to a specific directory automatically:
+#	bind download torrents = spawn $XDG_DATA_HOME/uzbl/scripts/batch_download.sh
+#		torrent --download --dir=$HOME/Torrents
+#	To use:
+#		download torrents
+ 
+ 
+# Initialize to default values
+ASK=false
+CLIP=false
+CLOBBER=false
+CONFIRM=false
+COOKIES=true
+DIR=$HOME
+DL=false
+EXPORT=false
+EXPORT_APPEND=false
+EXPORT_NAME="export"
+WGET="wget"
+ 
+# Parse parameters sent from uzbl
+for ((i=1; i < 8; i++))
+do
+	if [ $i = 5 ]
+	then
+		SOCKET=$1
+	fi
+	shift
+done
+ 
+# Set user agent to same as uzbl
+USERAGENT=$(uzblctrl -s $SOCKET -c 'print @useragent')
+case $? in
+	0)	# uzblctrl completed normally, continue
+	;;
+	*)	# error, uzblctrl failed, uzbl instance gone?
+		exit -1
+	;;
+esac
+ 
+# Store regex
+PATTERN=$1
+shift
+ 
+# Find which options to use
+while [ $# -ne 0 ]; do
+	case $1 in
+		"--ask")
+			ASK=true
+		;;
+		"--clip")
+			CLIP=true
+		;;
+		"--clobber")
+			CLOBBER=true
+		;;
+		"--confirm")
+			CONFIRM=true
+		;;
+		--dir=*)
+			DIR=${1##--dir=}
+		;;
+		"--download")
+			DL=true
+		;;
+		"--export")
+			EXPORT=true
+		;;
+		"--export-append")
+			EXPORT_APPEND=true
+		;;
+		--export-as=*)
+			EXPORT_NAME=${1##--export-as=}
+		;;
+		"--no-cookies")
+			COOKIES=false
+		;;
+		*)
+			uzblctrl -s $SOCKET -c 'set status_message = Error: Unknown option '$1''
+			exit -1
+		;;
+	esac
+	shift
+done
+ 
+# Get the number of links in the document
+LINK_NUM=$(uzblctrl -s $SOCKET -c 'print @<document.links.length>@')
+case $? in
+	0)	# uzblctrl completed normally, continue
+	;;
+	*)	# error, uzblctrl failed, uzbl instance gone?
+		exit -1
+	;;
+esac
+ 
+# Store the links in the document
+for ((i=0; i < $LINK_NUM; ++i))
+do
+	LINKS[$i]=$(uzblctrl -s $SOCKET -c 'print @<document.links['$i'].href>@')
+	case $? in
+		0)	# uzblctrl completed normally, continue
+		;;
+		*)	# error, uzblctrl failed, uzbl instance gone?
+			exit -1
+		;;
+	esac
+ 
+	# Check if given pattern is in last link received
+	if [[ "${LINKS[$i]}" =~ $PATTERN ]];
+	then
+		FILTERED[$i]=${LINKS[$i]}
+	fi
+done
+ 
+# Show a confirmation listing of URIs
+if $CONFIRM
+then
+	# Construct the string to be fed to zenity
+	for ((i=0; i < $LINK_NUM; ++i))
+	do
+		if [ -z "${FILTERED[$i]}" ]
+		then
+			MERGE=$MERGE\ "FALSE"
+		else
+			MERGE=$MERGE\ "TRUE"
+		fi
+		MERGE=$MERGE\ ${LINKS[$i]}
+	done
+	# Run zenity, saving selected URIs into TMP
+	TMP=$(zenity --title="Download Selector" --width=500 --height=500 \
+	       	--list --checklist --column="DL" --column="URI" --separator=" " \
+       		--print-column="2" ${MERGE})
+ 
+	# Check zenity's return value
+	case $? in
+		0)	# Exited by OK button, save changes
+			unset FILTERED
+			FILTERED=$TMP
+		;;
+		1)	# User cancelled operation, so exit
+			exit 0
+		;;
+		-1)	# ERROR OH NOES
+			exit -1
+		;;
+		5)	# For use with automatic close timer in zenity, unused here
+		;;
+		*)	# Unknown return value, exit
+			exit -1
+		;;
+	esac
+ 
+	# Free some memory, I think (not sure how bash manages memory)
+	unset TMP
+	unset MERGE
+fi
+ 
+# If no files matched regex and/or no files selected in dialog, exit
+if [[ -z ${FILTERED[@]} ]]
+then
+	if $CONFIRM
+	then
+		uzblctrl -s $SOCKET -c 'set status_message = No files selected'
+	else
+		uzblctrl -s $SOCKET -c 'set status_message = No regex matches '$PATTERN''
+	fi
+	exit 0
+fi
+ 
+# Ask for the directory to save into
+if $ASK
+then
+	DIR=$(zenity --file-selection --title="Select a directory to save to" \
+       		--filename=$DIR --directory)
+	case $? in
+		0)	# User selected a directory, nothing needs to be done
+		;;
+		1)	# User cancelled, so exit
+			exit 0
+		;;
+		-1)	# Error, maybe? Not sure if this is used currently
+			exit -1
+		;;
+		*)	# Unknown return value, exit
+			exit -1
+		;;
+	esac
+fi
+ 
+#### Do requested operation ####
+ 
+# Copy into clipboard
+if $CLIP
+then
+	echo ${FILTERED[@]} | tr ' ' '\n' | xclip
+fi
+ 
+# Download selected URIs
+if $DL
+then
+	# Check if download directory exists
+	if [ -d "${DIR}" ]
+	then
+		cd "$DIR"
+	else
+		uzblctrl -s $SOCKET -c 'set status_message = Error: '$DIR' does not exist'
+		exit -1
+	fi
+ 
+	# Check if download directory is writable
+	if [ -w "$DIR" ]
+	then
+ 
+		# Check if we are using cookies
+		if $COOKIES
+		then
+			if [ -r ${XDG_DATA_HOME}/uzbl/cookies.txt ]
+			then
+				WGET="${WGET} --load-cookies ${XDG_DATA_HOME}/uzbl/cookies.txt"
+			else
+				uzblctrl -s $SOCKET -c 'set status_message = Could not read cookies.txt'
+				exit -1
+			fi
+		fi
+ 
+		# Check if we want to clobber or not
+		if ! $CLOBBER 
+		then
+			WGET="$WGET --no-clobber"
+		fi
+ 
+		# Download files
+		${WGET} ${FILTERED[@]}
+ 
+		# Check return values
+		case $? in
+			0)	# Great, things worked fine
+				uzblctrl -s $SOCKET -c 'set status_message = '$PATTERN' download(s) complete'
+			;;
+			*)	# Uh oh... Something went wrong
+				uzblctrl -s $SOCKET -c 'set status_message = '$PATTERN' download(s) failed'
+				exit -1
+			;;
+		esac
+	else
+		uzblctrl -s $SOCKET -c 'set status_message = Cannot write to '$DIR': Permission denied'
+		exit -1
+	fi
+fi
+ 
+# Save URIs to text file
+if $EXPORT
+then
+	# Check if directory exists
+	if [ -d "$DIR" ]
+	then
+		cd "$DIR"
+	else
+		uzblctrl -s $SOCKET -c 'set status_message = Error: '$DIR' does not exist'
+		exit -1
+	fi
+ 
+	# Check if we have write permissions
+	if [ -w "$DIR" ]
+	then
+		if $EXPORT_APPEND
+		then
+			# Append URIs to file, separated by newlines
+			echo ${FILTERED[@]} | tr ' ' '\n' >> $EXPORT_NAME
+		else
+			# Save URIs to file, separated by newlines
+			echo ${FILTERED[@]} | tr ' ' '\n' > $EXPORT_NAME
+		fi
+	else
+		uzblctrl -s $SOCKET -c 'set status_message = Cannot write to '$DIR': Permission denied'
+		exit -1
+	fi
+ 
+	# Check to see if file was created
+	if [ -e "$EXPORT_NAME" ]
+	then
+		# Great!
+		uzblctrl -s $SOCKET -c 'set status_message = URIs exported'
+	else
+		# Not so great =(
+		uzblctrl -s $SOCKET -c 'set status_message = URI export failed'
+	fi
+fi

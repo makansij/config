@@ -1,0 +1,380 @@
+#!/usr/bin/env python3
+import os
+import re
+import sys
+import signal
+import sqlite3
+from  pprint import pprint as pp
+from  pprint import pformat
+from os.path import isfile, isdir, abspath, relpath
+from os.path import join as join_path
+from argparse import ArgumentParser
+from argparse import ArgumentDefaultsHelpFormatter
+from argparse import ArgumentTypeError
+
+'''
+    tags - file tagging with local sqlite database
+
+'''
+
+con = None
+
+
+def debug(loglevel, msg):
+    if loglevel <= args.verbose:
+        #sys.stderr.write(str(msg) + '\n')
+        print(msg)
+
+
+def handle_error(e):
+    sys.stderr.write('ERROR: {0}\n'.format(str(e)))
+    sys.stderr.write('exiting...')
+    sys.exit(1)
+
+
+def connect_db(db_path):
+    """ Checks if db exists and is valid returns connection.
+        Will create db if path is valid and no file is found."""
+    db_path = db_path.strip()
+    if os.path.isdir(db_path):
+        handle_error("no filename specified")
+
+    if isfile(db_path):
+        con = sqlite3.connect(db_path)
+        debug(2, 'Connected to "{0}"'.format(db_path))
+        debug(2, 'Checking DB "{0}"'.format(db_path))
+        try:
+            # con.execute("SELECT * FROM FOO")  # raises error if file not a database
+            for row in con.execute("SELECT name FROM sqlite_master WHERE type='table'"):
+                if row != ('TAGTABLE',):
+                    handle_error("Invalid database. Backup and remove file or choose different path.")
+            con.execute('SELECT ?, ? FROM tagtable', ['tag', 'path'])
+        except sqlite3.Error as e:
+            handle_error("File is not a sql database")
+        debug(2, 'DB valid "{0}"'.format(db_path))
+    else:
+        debug(2, 'File not found')
+        debug(2, 'Creating database')
+        con = create_db(db_path)
+
+    debug(2, 'creating regex function.')
+
+    def regexp(expr, item):
+        reg = re.compile(expr)
+        return reg.search(item) is not None
+
+    con.create_function("regexp", 2, regexp)
+
+    debug(2, 'Connected to "{0}"'.format(db_path))
+    return con
+
+
+def disconnect(con):
+    """ commits and disconnects """
+    con.commit()
+    con.close()
+    debug(2, 'Disconnected')
+
+
+def create_db(db_path):
+    """ connect and creates table, returns connection"""
+    con = sqlite3.connect(db_path)
+    con.executescript('''
+                      create table TAGTABLE(
+                          PATH varchar(256) not null,
+                          TAG varchar(256) not null,
+                          primary key(PATH, TAG)
+                      );
+                      create index IDX_PATH on tagtable (PATH);
+                      create index IDX_TAG on tagtable (TAG);
+                      create index IDX_BOTH on tagtable (PATH, TAG);
+                      ''')
+
+    #cursor.executescript(SETUP)
+
+    return con
+
+
+def get_files_from_path(path, recursive=False, maxdepth=0):
+    """ if recursive is set to true maxdepth is not considered"""
+    path = abspath(path)
+    foundfiles = []
+    for dirpath, dirnames, filenames in os.walk(path, topdown=True):  # Topdown for depth
+        foundfiles += [join_path(dirpath, single_file) for single_file in filenames]
+        if not recursive:
+            depth = dirpath.count(os.sep) - path.count(os.sep)
+            if depth == maxdepth:
+                dirnames[:] = []  # Don't recurse any deeper
+    return foundfiles
+
+
+def get_files_from_path_list(pathorfilelist, recursive=False, maxdepth=0):
+    foundfiles = []
+    for pathorfile in pathorfilelist:
+        if isfile(pathorfile):
+            foundfiles.append(abspath(pathorfile))
+        else:
+            foundfiles += get_files_from_path(pathorfile, recursive, maxdepth)
+    return foundfiles
+
+
+def tag(tags, files):
+    """ tags: list of tags
+        files: list of files
+        returns list of tagged entries (tag,filepath) tupels
+    """
+    global con
+    new_tags = []
+    cursor = con.cursor()
+    for tag in tags:
+        for filepath in files:
+            cursor.execute('SELECT * FROM TAGTABLE WHERE PATH = ? AND TAG = ?', (filepath, tag))
+            if cursor.fetchone():
+                debug(2, 'File "{0}" already has tag "{1}"'.format(filepath, tag))
+            else:
+                new_tags.append((tag, filepath))
+                debug(3, 'Add tag "{0}" to file "{1}"'.format(tag, filepath))
+    cursor = con.cursor()
+    cursor.executemany('INSERT INTO TAGTABLE(TAG, PATH) VALUES (?, ?)', new_tags)
+    return new_tags
+
+
+def untag(tags, files):
+    """ tags: list of tags
+        files: list of files
+        returns list of deleted (tag,filepath) tupels
+    """
+    global con
+    cursor = con.cursor()
+    delete = []
+    result = []
+    if tags == ['*']:
+        for filepath in files:
+            cursor.execute('SELECT TAG,PATH FROM TAGTABLE WHERE PATH = ?', (filepath,))
+            result += cursor.fetchall()
+            delete.append((filepath,))
+
+        con.executemany('DELETE FROM TAGTABLE WHERE PATH = ?', delete)
+    else:
+        for tag in tags:
+            for filepath in files:
+                cursor.execute('SELECT TAG,PATH FROM TAGTABLE WHERE PATH = ? and TAG = ? ', (filepath, tag))
+                result += cursor.fetchall()
+                delete.append((filepath, tag))
+        con.executemany('DELETE FROM TAGTABLE WHERE PATH = ? AND TAG = ?', delete)
+    return result
+
+
+def sanatize_expression(expression):
+    """splits expression, returns a list"""
+    expression = expression.strip()
+    if expression == '*':
+        return ['*']
+    exp_list = re.split('([^\(\) ]+)', expression)
+    exp_list = [i.strip() for i in exp_list]
+    exp_list = [i for i in exp_list if i != '']
+    #TODO handle_error("search expression not valid")
+    return exp_list
+
+
+def find(expression, regex):
+    """ returns (tag,filepath) tuples as list"""
+    global con
+    result = []
+    cursor = con.cursor()
+    exp_list = sanatize_expression(expression)
+    if '*' in exp_list:
+        debug(3, "find {0} in {1}".format(expression, regex))
+        cursor.execute('select TAG, PATH from TAGTABLE')
+        result = cursor.fetchall()
+    else:
+        keywords = ['and', 'or', 'not', '(', ')']
+        query_params = []
+        query = 'select distinct T1.TAG, T1.PATH from TAGTABLE T1, TAGTABLE T2 where ('
+        for exp in exp_list:
+            if exp in keywords:
+                query += exp
+            else:
+                query += '? in (T1.TAG, T2.TAG) and T1.PATH = T2.PATH '
+                query_params.append(exp)
+        query += ' AND T1.PATH regexp ? )'
+        query_params.append(regex)
+
+        cursor.execute(query, query_params)
+        result = cursor.fetchall()
+
+    debug(3, "result: {0} ".format(str(result)))
+    return result
+
+
+def tuples_to_dict(tuples):
+    """ returns a dictionary {file1: [tag1, tag2 ..],
+                              file2: [tag1, tag3 ..].. }"""
+    result = {}
+    for (tag, filepath) in tuples:
+        if filepath in result:
+            result[filepath].append(tag)
+        else:
+            result[filepath] = [tag]
+    return result
+
+
+def print_result(dictionary, absolute, loglevel):
+    for filepath in dictionary:
+        if absolute:
+            debug(loglevel, abspath(filepath) + ': ' + ', '.join(dictionary[filepath]))
+        else:
+            debug(loglevel, relpath(filepath) + ': ' + ', '.join(dictionary[filepath]))
+
+
+def cli_find(args):
+    expression = args.search_expression
+    regex = ""
+    for p in args.path:
+        if p[-1:] == '/':
+            regex += '^' + abspath(p) + '.*|'
+        else:
+            regex += '^' + abspath(p) + '/.*|'
+        if args.non_recursive:
+            #regex += '^' + abspath(p) + '/.*[/]|'
+            regex = regex[:-1] + '/[^/]$|'
+    regex = regex[:-1]
+    result = tuples_to_dict(find(expression, regex))
+    debug(0, "found " + str(len(result)) + " files")
+    print_result(result, args.absolute, 0)
+
+
+def check_tags(tags):
+    result = tags.lower()
+    keywords = ['and', 'or', 'not', '(', ')', '*']
+    for k in keywords:
+        if k in result:
+            handle_error("tags may not contain: " + ', '.join(keywords))
+
+
+def cli_ls(args):
+    args.search_expression = '*'
+    args.path = '.'
+    args.non_recursive = True
+    cli_find(args)
+
+
+def cli_tag(args):
+    tags = args.tags.split()
+    files = get_files_from_path_list(args.fileorpath, args.recursive)
+    if args.filter_exp:
+        reg = re.compile(args.filter_exp)
+        filter(reg.search, files)
+    if args.simulate:
+        return
+    if args.delete:
+        #a = untag(tags, files)
+        #print(a)
+        result = tuples_to_dict(untag(tags, files))
+        debug(0, "deleted " + str(len(result)) + " tags")
+        print_result(result, args.absolute, 1)
+    else:
+        check_tags(args.tags)
+        #a = tag(tags, files)
+        #print(a)
+        result = tuples_to_dict(tag(tags, files))
+        debug(0, "added " + str(len(result)) + " tags")
+        print_result(result, args.absolute, 1)
+
+
+def test():
+    def regexp(expr, item):
+        reg = re.compile(expr)
+        return reg.search(item) is not None
+    con = sqlite3.connect(':memory:')
+    con.create_function("REGEXP", 2, regexp)
+    con.executescript('''
+                      create table TAGTABLE(
+                          PATH varchar(256) not null,
+                          TAG varchar(256) not null,
+                          primary key(PATH, TAG)
+                      );
+                      create index IDX_PATH on tagtable (PATH);
+                      create index IDX_TAG on tagtable (TAG);
+                      create index IDX_BOTH on tagtable (PATH, TAG);
+                      ''')
+    con.execute('INSERT INTO TAGTABLE (TAG, PATH) VALUES (?, ?)', ['doc', '/bla/bla1'])
+    con.execute('INSERT INTO TAGTABLE (TAG, PATH) VALUES (?, ?)', ['doc', '/bla/bla2'])
+    cursor = con.cursor()
+    #cursor.execute('SELECT TAG FROM TAGTABLE WHERE PATH REGEXP ?',['"bla"'])
+    cursor.execute('SELECT * FROM TAGTABLE where PATH regexp ?', ['^/bla.*'])
+    data = cursor.fetchall()
+    print(data)
+    sys.exit(0)
+
+
+def path_or_file_type(pf):
+    if not (isfile(pf) or isdir(pf)):
+        msg = "{0} is not a file or path".format(pf)
+        raise ArgumentTypeError(msg)
+    else:
+        return pf
+
+
+def path_type(p):
+    if not (isdir(p)):
+        msg = "{0} is not a path".format(p)
+        raise ArgumentTypeError(msg)
+    else:
+        return p
+
+
+if __name__ == '__main__':
+    parser = ArgumentParser(description=__doc__)
+
+    parser.add_argument('--version', action='version', version='%(prog)s 0.1')
+    parser.add_argument('--db', help='user specified database path', nargs='?',
+                        default=os.path.expanduser("~/.tag.sql3.db"))
+    parser.add_argument('-d', '--test-debug', action='store_true', dest='debug',
+                        help='for developement')
+    parser.add_argument('-v', '--verbose',  action='count', default=0,
+                        help='verbosity level. e.g. -vvv is level 3')
+    parser.add_argument('-a', '--absolute',  action='store_true',
+                        help='print absolute path')
+    ##parser.set_defaults(func=cli_ls)
+
+    subparsers = parser.add_subparsers(help='availale commands')
+
+    tag_parser = subparsers.add_parser('tag')
+    tag_parser.set_defaults(func=cli_tag)
+    tag_parser.add_argument('-d', '--delete', action='store_true', dest='delete',
+                            help='delete tags instead of adding')
+    tag_parser.add_argument('-f', '--filter', dest='filter_exp',
+                            help='regex to apply to files')
+    tag_parser.add_argument('-r', '--recursive', action='store_true', dest='recursive',
+                            help='recusively include files/sub-directories')
+    tag_parser.add_argument('tags')
+    tag_parser.add_argument('fileorpath', nargs='*', type=path_or_file_type,
+                            help='file(s) and or path(s)')
+    tag_parser.add_argument('-s', '--simulate',  action='store_true',
+                            help='dont actually do the operation')
+
+    find_parser = subparsers.add_parser('find', formatter_class=ArgumentDefaultsHelpFormatter)
+    find_parser.set_defaults(func=cli_find)
+    find_parser.add_argument('-n', '--non-recursive', action='store_true', dest='non_recursive')
+    find_parser.add_argument('search_expression', default='*',
+                             help='and or not ( ) can be used.')
+    find_parser.add_argument('path', nargs='*', type=path_type,
+                             default='/', help='path(s)')
+
+    ls_parser = subparsers.add_parser('ls')
+    ls_parser.set_defaults(func=cli_ls)
+
+    args = parser.parse_args()
+    debug(2, "args are:" + str(args))
+    if args.debug:
+        test()
+    #signal.signal(signal.SIGTERM, disconnect)
+    try:
+        con = connect_db(args.db)
+        args.func(args)
+        disconnect(con)
+        sys.exit(0)
+    except AttributeError:
+        parser.print_help()
+# vim: set filetype=python:

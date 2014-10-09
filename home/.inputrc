@@ -1,0 +1,25 @@
+include /etc/inputrc
+set visible-stats on
+set completion-ignore-case on
+set editing-mode vi
+"\C-j": history-search-forward
+"\C-k": history-search-backward
+"\C-m": accept-line
+$if mode=vi
+    set keymap vi-command
+    ",p": "i !!*\r"
+    ",s": "Isudo \C-[A"
+    ",w": "Iwatch \"\C-[A\""
+    ",a": history-and-alias-expand-line
+    ",e": shell-expand-line
+    ",mm": start-kbd-macro
+    ",ms": end-kbd-macro
+    ",mp": call-last-kbd-macro
+
+    set keymap vi-insert
+    "jk": vi-movement-mode
+    # Needed because binding 'p' in command mode above wipes its insert mode
+    # function, too. This fixes that, and will insert 'p' when you type 'p'.
+    "p": self-insert
+    "i": self-insert
+$endif

@@ -1,0 +1,163 @@
+set modelines=5         " check first lines of file for modelines
+set keywordprg=":help"  "remap K to vim help
+"visuals "{{{
+set background=dark
+set showbreak=
+set number                  " Show line numbers.
+
+"Highlight matches when jumping to next
+
+nnoremap <silent> n   n:call HLNext(0.1)<cr>
+nnoremap <silent> N   N:call HLNext(0.1)<cr>
+"highlight the match in red...
+function! HLNext (blinktime)
+    highlight WhiteOnRed ctermfg=White ctermbg=Red
+    let [bufnum, lnum, col, off] = getpos('.')
+    let matchlen = strlen(matchstr(strpart(getline('.'),col-1),@/))
+    let target_pat = '\c\%#'.@/
+    let ring = matchadd('WhiteOnRed', target_pat, 101)
+    redraw
+    exec 'sleep ' . float2nr(a:blinktime * 1000) . 'm'
+    call matchdelete(ring)
+    redraw
+endfunction
+
+"}}}
+"formatting"{{{
+set textwidth=79        " Set textwidth to 80, this implies word wrap.
+set wrapmargin=0        " only used when textwidth=0
+" formatting with automatic formatting or gq uses formatexpr>formatprg>internal
+" formatting with gw uses internal
+set formatoptions+="j"     " see fo-table
+"set equalprg="par\ -w80"      " same for =
+"set formatprg=           " using vim-autoformat now
+
+"" tab options general rule:
+"" if working with spaces shiftwidth == softabstop
+"" if working with tabs tabstop == softtabstop
+set backspace=indent,eol,start  " more powerful backspacing
+set shiftround
+set tabstop=8                                  " tabstop specifies the width of a present tab character
+set shiftwidth=4                               " shiftwidth specifies the width for shifting (pressing tab key)
+set softtabstop=4                              " backspace deletes x spaces; if noexpandtab pressing tab key inserts x spaces
+set expandtab                                  " When inserting TABs replace them with [shiftwidth] spaces
+set autoindent                                      "automatically indent to match adjacent lines
+set smartindent                                     "smart indenting for additional languages
+"}}}
+
+set updatetime=500            " Set update time to 1 second (default is 4 seconds)
+set nostartofline             " Keep the horizontal cursor position when moving vertically.
+set nowrap                    " Do not break long lines.
+set linebreak                 " intelligent wrapping of words (only applies if wrap is set)
+set listchars=eol:↲,extends:>,tab:-▸,trail:·,nbsp:~ " sets symbols for tab eol etc.
+
+set timeoutlen=500            " mapping timeout
+set ttimeoutlen=50            " keycode timeout
+set lazyredraw
+"" make alt mappings possible in gnome terminal
+"let c='a'
+"while c <= 'z'
+"  exec "set <A-".c.">=\e".c
+"  exec "imap \e".c." <A-".c.">"
+"  let c = nr2char(1+char2nr(c))
+"endw
+"if neobundle#is_installed("vim-airline")
+  set laststatus=2                      " Always show the name of the file being edited.
+  set showmode                  " Show the mode (insert,replace,etc.)
+"endif
+set gcr=a:blinkon0            " No blinking cursor please.
+set winminheight=0            " Do not show any line of minimized windows
+set incsearch                 " Set live search
+set hlsearch
+set ignorecase                " ignore case for searching
+set smartcase                 " do case-sensitive if there's a capital letter
+set showmatch                 " Show matching braces.
+set scrolloff=2
+set scrolljump=1
+set sidescrolloff=5
+set virtualedit=block,onemore
+set display+=lastline
+set noequalalways             " dont resize all windows when closing a window
+"set lazyredraw
+"set autoread                  " autoread if file changed outside of vim
+set history=1000
+
+" Save your backups to a less annoying place than the current directory.
+" If you have .vim-backup in the current directory, it'll use that.
+" Otherwise it saves it to ~/.vim/backup or . if all else fails.
+if isdirectory($HOME . '/.vim/backup') == 0
+  :silent !mkdir -p ~/.vim/backup >/dev/null 2>&1
+endif
+set backupdir-=.
+set backupdir+=.
+set backupdir-=~/
+set backupdir^=~/.vim/backup//
+set backupdir^=./.vim-backup//
+set backup
+
+" Save your swp files to a less annoying place than the current directory.
+" If you have .vim-swap in the current directory, it'll use that.
+" Otherwise it saves it to ~/.vim/swap, ~/tmp or .
+if isdirectory($HOME . '/.vim/swap') == 0
+  :silent !mkdir -p ~/.vim/swap >/dev/null 2>&1
+endif
+set directory=./.vim-swap//
+set directory+=~/.vim/swap//
+set directory+=~/tmp//
+set directory+=.
+
+"activate with e.g :verbose=9 verbosefile
+"set verbosefile=~/.vim/verbosefile
+" viminfo stores the the state of your previous editing session
+set viminfo+=n~/.vim/viminfo
+
+if exists("+undofile")
+  " undofile - This allows you to use undos after exiting and restarting
+  " This, like swap and backups, uses .vim-undo first, then ~/.vim/undo
+  " :help undo-persistence
+  " This is only present in 7.3+
+  if isdirectory($HOME . '/.vim/undo') == 0
+    :silent !mkdir -p ~/.vim/undo > /dev/null 2>&1
+  endif
+  set undodir=./.vim-undo//
+  set undodir+=~/.vim/undo//
+  set undofile
+  set undolevels=1000 "maximum number of changes that can be undone
+  set undoreload=10000 "maximum number lines to save for undo on a buffer reload
+endif
+
+" options for gvim
+if has('gui_running')
+    set guioptions-=T " no toolbars
+    set guioptions+=LlRrb guioptions-=LlRrb " no scrollbars
+    colorscheme pablo
+endif
+
+"" sessionopts NOTE: history is not saved
+"" save: :mksession /path/to/file
+"" load vim -S /path/to/file
+set sessionoptions=blank,buffers,curdir,folds,globals,help,localoptions,options,resize,tabpages,winsize,winpos
+
+"" set folding options "
+"" za, zc, zC, zo, zO
+"" create marker: zf, :{range}fo
+"" markers {{{<indentation level>, }}}
+set foldenable
+set foldlevelstart=99
+"set foldmethod=indent
+"set foldmethod=marker
+set foldmethod=syntax
+
+highlight Folded ctermfg=yellow ctermbg=NONE
+"guibg=grey guifg=blue
+"highlight FoldColumn guibg=darkgrey guifg=white
+
+set mouse=a   " enable mouse (for scrolling)
+set mousehide "hide when characters are typed
+"set clipboard=unnamed "the unnamed register(yank, paste) is synced with OS clipboard
+
+" show a line at column 80
+"set colorcolumn=80
+let &colorcolumn=join(range(80, 255), ',')
+" highlight cursor line
+set cursorline

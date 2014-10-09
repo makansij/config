@@ -1,0 +1,7 @@
+#! /bin/bash
+RET=1;
+until [[ $RET = 0 ]]; do
+  $@; 
+  RET="$?";
+  sleep 1;
+done

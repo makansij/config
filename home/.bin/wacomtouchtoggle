@@ -1,0 +1,48 @@
+#!/usr/bin/python2
+
+# kermit-internal-pytouch [0|1]
+
+import re
+import sys
+import subprocess
+
+
+def setenabled(num, val):
+    if val == 1:
+        print("enabling device")
+    elif val == 0:
+        print("disabling device")
+    else:
+        sys.exit("parameter has to be 1 or 0")
+    subprocess.call(['xinput', '-set-prop', num,
+                    "Device Enabled", str(val)])
+
+#get identifier
+if len(sys.argv) > 2:
+    sys.exit("error")
+resp = subprocess.check_output(['xinput', '-list'])
+fingerLine = re.compile('Wacom.*Finger touch')
+idExpr = re.compile('id=(?P<number>\d+)')
+for line in resp.split("\n"):
+    if fingerLine.search(line):
+        print(line)
+        identifier = idExpr.search(line)
+        num = identifier.group("number")
+        if len(sys.argv) == 2:
+            if sys.argv[1] == 1:
+                setenabled(sys.argv[1])
+            elif sys.argv[1] == 0:
+                setenabled(sys.argv[1])
+            sys.exit()
+# get state
+resp = subprocess.check_output(['xinput', '-list-props', num])
+enabledLine = re.compile('Device Enabled.*(?P<status>[01])')
+for line in resp.split("\n"):
+    status = enabledLine.search(line)
+    if status:
+        if status.group("status") == "1":
+            print("device enabled... ")
+            setenabled(num, 0)
+        elif status.group("status") == "0":
+            print("device disabled... ")
+            setenabled(num, 1)

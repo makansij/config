@@ -1,0 +1,230 @@
+" enable <c-q> <c-s> etc in xterm
+"if ($TERM == "xterm")
+"  silent !stty -ixon &
+"endif
+" folding"{{{
+nnoremap <silent> <Space> @=(foldlevel('.')?'za':"\<Space>")<CR>
+vnoremap <Space> zf
+"}}}
+" F-Mappings"{{{
+
+" show Funktion key mapping
+noremap <F1> :call ShowFMappings()<CR>
+
+" toggle show unprintable chars
+nnoremap <F2> :call ListToggle()<CR>
+inoremap <F2> <c-o>:call ListToggle()<CR>
+
+" toggle paste mode
+"noremap <F3> :set nopaste! <CR>
+
+" copy to clipboard
+noremap <silent> <F3> "+y
+
+" paste from clipboard
+nnoremap <silent> <F4> :set paste<CR>"+gp :set nopaste<CR>
+"inoremap <silent> <F4> <c-o>:set paste<CR><c-o>"+gp<c-o>:set nopaste<CR>
+inoremap <silent> <F4> <c-o>:set paste<CR><c-r>+<c-o>:set nopaste<CR>
+augroup F5_mapping
+    autocmd!
+    au BufRead *.md nnoremap <buffer> <F5> :call MarkdownPreview()<CR>
+    au BufRead *.md nnoremap <buffer> <Leader>md :call MarkdownCompile()<CR>
+    au BufRead *.cpp,*.h nnoremap <buffer> <F5> :make<CR>
+augroup END
+
+nnoremap <F6> :GundoToggle<CR>
+
+nnoremap <F7>	:VimFiler -split -toggle -simple
+      \ -toggle -horizontal -reverse<cr>
+
+"" Switch color theme
+noremap <silent> <F8> :NEXTCOLOR<cr>
+noremap <silent> <s-F8> :PREVCOLOR<cr>
+
+"" mapping for Taglist
+"noremap <F9> :TlistToggle <CR>
+noremap <F9> :TagbarToggle <CR>
+
+" make ctags / clang
+""nnoremap <F10> :!ctags -R --c++-kinds=+p --fields=+iaS --extra=+q .<CR>
+""nnoremap <F10> :!cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ..<CR>
+nnoremap <F10> :!cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON .<CR>
+
+nnoremap <F11> :call ToggleExternalCommand("geeqie -t "
+      \.$HOME."/us_layout.png")<cr>
+"" toggle encoding
+noremap <silent> <F12> :call ToggleEncoding()<CR>
+"}}}
+" sane defaults"{{{
+nnoremap Y y$
+nnoremap Q @@
+
+" jumplist movements
+nnoremap <c-l> <c-i>
+nnoremap <c-o> <c-o>
+
+" easier inc dec
+nnoremap + <C-a>
+nnoremap - <C-x>
+
+"" Next / previous error with Tab / Shift+Tab.
+nnoremap <silent> <Tab> :cn<CR>
+nnoremap <silent> <S-Tab> :cp<CR>
+
+" visual shifting (builtin-repeat)
+vnoremap < <gv
+vnoremap > >gv
+
+" search for visually highlighted text
+vmap // y/<C-R>"<CR>
+
+" esc does behave differently than c-c
+inoremap jk <esc>
+cnoremap jk <c-c>
+inoremap kj <esc>
+cnoremap kj <c-c>
+
+"" Umlaut mappings for US keyboard.
+inoremap "a ä
+inoremap "o ö
+inoremap "u ü
+inoremap "s ß
+inoremap "A Ä
+inoremap "O Ö
+inoremap "U Ü
+
+" show register contents
+nnoremap <silent> "" :registers "0123456789abcdefghijklmnopqrstuvwxyz*+.:%#<CR>
+nnoremap ; :
+nnoremap : ;
+nnoremap q; q:
+
+" reread modeline on :e
+cnoremap :e :e | doautocmd BufRead
+
+" jump to end of line with a
+nnoremap a $
+
+"}}}
+" Navigation"{{{
+
+"" Cycling through Windows quicker.
+noremap <A-Down> <C-W><Down><C-W>_
+noremap <A-Up> <C-W><Up><C-W>_
+noremap <A-Left> <C-W><Left><C-W>|
+noremap <A-Right> <C-W><Right><C-W>|
+nnoremap <A-j> <C-W><Down>
+nnoremap <A-k> <C-W><Up>
+nnoremap <A-h> <C-W><Left>
+nnoremap <A-l> <C-W><Right>
+nnoremap <C-j> <C-W><Down><C-W>_
+nnoremap <C-k> <C-W><Up><C-W>_
+
+"" resize windows
+nnoremap <silent> <C-Up> :call Resize('+')<CR>
+nnoremap <silent> <C-Down> :call Resize('-')<CR>
+nnoremap <silent> <C-Left> :call Resize('<')<CR>
+nnoremap <silent> <C-Right> :call Resize('>')<CR>
+
+"" Cycling through Tabs quicker.
+noremap <A-PAGEUP> :tabp<CR>
+noremap <A-PAGEDOWN> :tabn<CR>
+
+"" move Tabs quicker.
+"nnoremap <silent> <C-PAGEUP> :execute 'silent! tabmove ' . (tabpagenr()-2)<CR>
+"nnoremap <silent> <C-PAGEDOWN> :execute 'silent! tabmove ' . tabpagenr()<CR>
+
+"" move window to Tabs quicker.
+nnoremap <silent> <C-PAGEUP> :call MoveToPrevTab()<CR>
+nnoremap <silent> <C-PAGEDOWN> :call MoveToNextTab()<CR>
+
+"" Search for selected text, forwards or backwards.
+vnoremap <silent> * :<C-U>
+  \let old_reg=getreg('"')<Bar>let old_regtype=getregtype('"')<CR>
+  \gvy/<C-R><C-R>=substitute(
+  \escape(@", '/\.*$^~['), '\_s\+', '\\_s\\+', 'g')<CR><CR>
+  \gV:call setreg('"', old_reg, old_regtype)<CR>
+vnoremap <silent> # :<C-U>
+  \let old_reg=getreg('"')<Bar>let old_regtype=getregtype('"')<CR>
+  \gvy?<C-R><C-R>=substitute(
+  \escape(@", '?\.*$^~['), '\_s\+', '\\_s\\+', 'g')<CR><CR>
+  \gV:call setreg('"', old_reg, old_regtype)<CR>
+"}}}
+" leader mappings"{{{
+" sort selection
+vmap <leader>s :sort<cr>
+nnoremap <leader>hl :set hlsearch! hlsearch?<CR>
+
+nnoremap <leader>zz :let &scrolloff=999-&scrolloff<CR>
+nnoremap <leader>we <C-w>=
+nnoremap <leader>wr <C-w>x
+"nnoremap <leader>wf <C-w>r
+
+"quik save/close
+nnoremap <Leader>q :q <CR>
+nnoremap <Leader>qq :q! <CR>
+nnoremap <Leader>qa :qa <CR>
+nnoremap <Leader>w :w <CR>
+nnoremap <Leader>wq :wq <CR>
+
+"make dir if new file cannot be saved
+nnoremap <Leader>wp :call mkdir(expand('%:h'), 'p')
+
+" edit files in current file's dir
+noremap <leader>ew :e <C-R>=expand("%:p:h") . "/" <CR>
+noremap <leader>es :sp <C-R>=expand("%:p:h") . "/" <CR>
+
+"" Make it easy to update/reload _vimrc.
+nnoremap <leader>vs :source $HOME/.vimrc <CR>
+nnoremap <leader>v :sp     $HOME/.vimrc <CR>
+
+"" save as root
+nnoremap <leader>su :w !sudo tee % <CR>
+
+" Locally (local to block) rename a variable
+nnoremap <leader>re "zyiw:call Refactor()<cr>mx:silent! norm gd<cr>[{V%:s/<C-R>//<c-r>z/g<cr>`x
+"nnoremap <leader>re gd[{V%:s/<C-R>///gc<left><left><left>
+
+" Redo last colon command
+nnoremap <Leader>: @:
+
+" Redraw
+nnoremap <Leader>rr :redraw! <CR>
+
+nnoremap <Leader>s :let @x=@" \| let @"=@a \| let @a=@b \| let @b=@x \| reg "ab<CR>
+
+"}}}
+" Python "{{{
+" Execute a selection of python code.
+"vnoremap <C-[> :py EvaluateCurrentRange() <CR>
+vnoremap <C-e> :Pyer<CR>
+"nnoremap <C-e> :Pyer<CR>
+"}}}
+"command line "{{{
+cnoremap <C-j> <t_kd>
+cnoremap <C-k> <t_ku>
+cnoremap <C-a> <Home>
+cnoremap <C-e> <End>
+"}}}
+
+"free mappings"{{{
+"nnoremap H
+"nnoremap L
+"}}}
+
+"training mappings"{{{
+nnoremap <Left> <nop>
+nnoremap <Right> <nop>
+nnoremap <Up> <nop>
+nnoremap <Down> <nop>
+cnoremap w<cr> nope!use,w
+cnoremap q<cr> nope!use,q
+"inoremap <Esc> <Esc>:!clear && fortune -o <bar> cowsay -f hellokitty<bar> lolcat && sleep 5<CR>
+"inoremap <esc> <nop>
+"}}}
+" helpers for profiling {{{
+    nnoremap <leader>DD :exe ":profile start profile.log"<cr>:exe ":profile func *"<cr>:exe ":profile file *"
+    nnoremap <silent> <leader>DP :exe ":profile pause"<cr>
+    nnoremap <silent> <leader>DC :exe ":profile continue"<cr>
+    nnoremap <silent> <leader>DQ :exe ":profile pause"<cr>:noautocmd qall!<cr>
+"}}}

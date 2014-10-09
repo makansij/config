@@ -1,0 +1,4 @@
+#!/bin/bash
+ssid=$(iwconfig wlan0 | sed -rn 's/.*ESSID:"(.*)"/\1/p')
+signal=$(iwconfig wlan0 | sed -rn 's/.*Link Quality=([^ ]+) .*/\1/p')
+echo $ssid $signal

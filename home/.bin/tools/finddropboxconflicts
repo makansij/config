@@ -1,0 +1,160 @@
+#!/bin/bash
+usage()
+{
+cat << EOF
+usage: $0 [options] dir
+
+This script finds conflicting files in a folder.
+
+OPTIONS:
+   -h           Show this message
+   -d           Delete found files (carefull without -c option!)
+   -f [regex]   Filter files (egrep expr.)
+   -b           Only match binary files
+   -i           Invert filter -f or -b (matches are excluded)
+   -c           Ask for every found file what to do
+   -v           Verbose (report every found file, note: implied by -c, -f and if
+                no option given)
+EOF
+}
+get_dropbox_conflict_basename() {
+    echo "$1" | sed -e "s/ ("$HOSTNAME"'s conflicted copy [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9])//g" | sed -e "s/ ("$HOSTNAME"s in Konflikt stehende Kopie [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9])//g"
+}
+
+O_DELETE=
+O_FILTER=
+O_BINARY=
+O_INVERT=
+O_CONFIRM=
+O_VERBOSE=
+O_DIR="$HOME/Dropbox"
+while getopts "hdf:bicv" OPTION
+do
+     case $OPTION in
+         h)
+             usage
+             exit 1
+             ;;
+         d)
+             O_DELETE=1
+             ;;
+         f)
+             O_FILTER="$OPTARG"
+             ;;
+         b)
+            O_BINARY=1
+             ;;
+         i)
+            O_INVERT=1
+             ;;
+         c)
+             O_VERBOSE=1
+             O_CONFIRM=1
+             ;;
+         v)
+             O_VERBOSE=1
+             ;;
+         ?)
+             usage
+             exit
+             ;;
+     esac
+done
+shift $(($OPTIND - 1))
+#[[ -n $1 ]] && O_DIR="$(readlink -f $1)"
+[[ -n $1 ]] && O_DIR="$1"
+DUPS=$(find "$O_DIR" \
+    -path "*("$HOSTNAME"s in Konflikt stehende Kopie [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]*" \
+    -print -o -path "*("$HOSTNAME"'s conflicted copy [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]*" \
+    -print | egrep -v ".dropbox.cache|$HOME/.Trash/")
+
+# filter by expr
+if [[ $O_FILTER && ! $O_INVERT ]]; then
+    DUPS=$(echo "$DUPS" | egrep "$O_FILTER")
+elif [[ $O_FILTER  && $O_INVERT ]]; then
+    DUPS=$(echo "$DUPS" | egrep -v "$O_FILTER")
+fi
+# if no operation is given imply verbose (list found files)
+if [[ ! $O_DELETE && ! $O_CONFIRM ]]; then
+    O_VERBOSE=1
+fi
+# warn if delete without confirm
+if [[ $O_DELETE && ! $O_CONFIRM ]]; then
+    read -n1 -p "warning all found files will be deleted! y/N?" answer
+    case $answer in
+        y | Y )
+            ;;
+        *)
+            exit 0
+            ;;
+    esac
+fi
+#echo $O_DELETE $O_FILTER $O_INVERT $O_CONFIRM $O_VERBOSE
+# main loop processing found files
+echo "$DUPS" | while read LINE; do
+    [[ ! -f "$LINE" ]] && continue;
+    #filter by mime-encoding
+    if [[ $O_BINARY && ! $O_INVERT ]]; then
+        [[ $(file -b --mime-encoding "$LINE") != "binary" ]] && continue
+    elif [[ $O_BINARY && $O_INVERT ]]; then
+        [[ $(file -b --mime-encoding "$LINE") == "binary" ]] && continue
+    fi
+
+    [[ $O_VERBOSE ]] && echo $LINE
+
+
+    if [[ $O_CONFIRM ]]; then
+        if [[ $O_DELETE ]]; then
+            read -n1 -p "delete Y/n?" answer </dev/tty
+            case $answer in
+                n | N )
+                    ;;
+                *)
+                    rm "$LINE"
+                    ;;
+            esac
+            echo
+            continue
+        fi
+
+        read -n1 -p "[d]elete [v]imdiff [m]ove/overwrite original [N]othing ?" answer </dev/tty
+        case $answer in
+            v)
+                if [[ $(file -b --mime-encoding "$LINE") == "binary" ]]; then
+                    read -n1 -p "Warning! File is binary. continue y/N?" answer </dev/tty
+                    case $answer in
+                        y | Y )
+                            vimdiff "$(get_dropbox_conflict_basename "$LINE")" "$LINE" </dev/tty
+                            ;;
+                        *)
+                            ;;
+                    esac
+                else
+                    vimdiff "$(get_dropbox_conflict_basename "$LINE")" "$LINE" </dev/tty
+                fi
+                read -n1 -p "[d]elete [m]ove/overwrite original [N]othing ?" answer </dev/tty
+                case $answer in
+                    d)
+                        rm "$LINE"
+                        ;;
+                    m)
+                        mv "$LINE" "$(get_dropbox_conflict_basename "$LINE")"
+                        ;;
+                esac
+                ;;
+            d)
+                rm "$LINE"
+                ;;
+            m)
+                mv "$LINE" "$(get_dropbox_conflict_basename "$LINE")"
+                ;;
+            *)
+                echo "basenam:"
+                echo "$(get_dropbox_conflict_basename "$LINE")"
+        esac
+        echo
+    elif [[ $O_DELETE ]]; then
+        rm "$LINE"
+    fi
+
+done

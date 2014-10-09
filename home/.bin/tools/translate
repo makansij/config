@@ -1,0 +1,38 @@
+#!/bin/bash
+# access translate.google.com from terminal
+
+help='translate <text> [[<source language>] <target language>]
+if target missing, use DEFAULT_TARGET_LANG
+if source missing, use auto
+list supported languages: translate -l'
+languages='af=Afrikaans sq=Albanisch ar=Arabisch hy=Armenisch az=Aserbaidschanisch eu=Baskisch bn=Bengalisch bg=Bulgarisch zh-TW=Chinesisch (traditionell) zh-CN=Chinesisch (vereinfacht) da=Dänisch de=Deutsch en=Englisch eo=Esperanto et=Estnisch fi=Finnisch fr=Französisch gl=Galizisch ka=Georgisch el=Griechisch gu=Gujarati ht=Haitianisch iw=Hebräisch hi=Hindi id=Indonesisch ga=Irisch is=Isländisch it=Italienisch ja=Japanisch yi=Jiddisch kn=Kannada ca=Katalanisch ko=Koreanisch hr=Kroatisch la=Lateinisch lv=Lettisch lt=Litauisch ms=Malaysisch mt=Maltesisch mk=Mazedonisch nl=Niederländisch no=Norwegisch fa=Persisch pl=Polnisch pt=Portugiesisch ro=Rumänisch ru=Russisch sv=Schwedisch sr=Serbisch sk=Slowakisch sl=Slowenisch es=Spanisch sw=Suaheli tl=Tagalog ta=Tamil te=Telugu th=Thailändisch cs=Tschechisch tr=Türkisch uk=Ukrainisch hu=Ungarisch ur=Urdu vi=Vietnamesisch cy=Walisisch be=Weißrussisch'
+# adjust to taste
+DEFAULT_TARGET_LANG=de
+
+if [[ $1 = -h || $1 = --help ]]
+then
+    echo "$help"
+    exit
+fi
+if [ $1 = -l ]
+then
+    echo "$languages"
+    exit
+fi
+
+if [[ $3 ]]; then
+    source="$2"
+    target="$3"
+elif [[ $2 ]]; then
+    source=auto
+    target="$2"
+else
+    source=auto
+    target="$DEFAULT_TARGET_LANG"
+fi
+
+result=$(curl -s -i --user-agent "" -d "sl=$source" -d "tl=$target" --data-urlencode "text=$1" http://translate.google.com)
+encoding=$(awk '/Content-Type: .* charset=/ {sub(/^.*charset=["'\'']?/,""); sub(/[ "'\''].*$/,""); print}' <<<"$result")
+#iconv -f $encoding <<<"$result" | awk 'BEGIN {RS="<div"};/<span[^>]* id=["'\'']?result_box["'\'']?/ {sub(/^.*id=["'\'']?result_box["'\'']?(>| [^>]*>)([ \n\t]*<[^>]*>)*/,"");sub(/<.*$/,"");print}' | html2text -utf8
+iconv -f $encoding <<<"$result" |  awk 'BEGIN {RS="</div>"};/<span[^>]* id=["'\'']?result_box["'\'']?/' | html2text -utf8
+exit
