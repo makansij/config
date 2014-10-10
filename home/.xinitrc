@@ -20,9 +20,14 @@ xbindkeys &
 
 dropbox start &
 cat ~/.encfspassword | encfs -S ~/Dropbox/.encfs/ ~/Dropbox.encfs/ &
+if lspci | grep VirtualBox; then
+    VBoxClient-all &
+fi
+
+
 #exec gnome-session
 #exec startkde
-# exec startxfce4
-exec awesome
+#exec startxfce4
+exec openbox-session
+#exec awesome
 # exec qtile
-# ...or the Window Manager of your choice

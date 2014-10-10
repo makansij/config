@@ -64,6 +64,18 @@ if checkInstall awesome; then
     mkdir -p $HOME/.config
     makeLink $CONFIG_PATH/.config/awesome $HOME/.config
 fi
+if checkInstall openbox; then
+    checkInstall xorg-server
+    checkInstall xorg-xinit
+    checkInstall xorg-utils
+    checkInstall xorg-server-utils
+    checkInstall xterm
+    checkInstall ttf-dejavu
+    checkInstall obconf
+    checkInstall obmenu
+    mkdir -p $HOME/.config
+    makeLink $CONFIG_PATH/.config/openbox $HOME/.config
+fi
 if [ "$VBOX" = true ]; then
     checkInstall virtualbox-guest-modules
     checkInstall virtualbox-guest-utils
