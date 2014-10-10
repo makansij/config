@@ -509,7 +509,6 @@ if count(g:my_bundle_groups, 'colors') "{{{
     NeoBundle 'chriskempson/vim-tomorrow-theme'
     NeoBundle 'w0ng/vim-hybrid'
     NeoBundle 'sjl/badwolf'
-    NeoBundle 'jelera/vim-gummybears-colorscheme'
     NeoBundle 'zeis/vim-kolor'
     let g:hybrid_use_Xresources = 1
     colorscheme hybrid

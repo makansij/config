@@ -20,17 +20,17 @@ makeLink()
   local target=$1
   local destination=$2
   local filename=`basename $1`
-  
+
   if [ ! -e "$target" ]
-  then 
+  then
     echo "error: $target does not exist!"
     return
   fi
 
-  if [ -e "$destination/$filename" ] 
+  if [ -e "$destination/$filename" ]
   then
     echo "$destination/$filename : file already exist!"
-    echo "unlink/delete and make new link? y/n"
+    echo "unlink/delete and make new link? Y/n"
 
     read answer
     case $answer in
@@ -38,7 +38,7 @@ makeLink()
           *) rm -r $destination/$filename;;
     esac
   fi
- 
+
   ln -s $target $destination/$filename
   echo "linked: $destination/$filename -> $target"
 }
@@ -46,17 +46,17 @@ makeLink()
 checkInstall()
 {
   local program=$1
-  if type $program > /dev/null
+  if pacman -Q $program > /dev/null 2>&1
   then
     echo "$program found"
     return
-  else 
-    echo "$program not found! install? y/n"
+  else
+    echo "$program not found! install? Y/n"
 
     read answer
     case $answer in
       n*|N*) return ;;
-          *) sudo apt-get install $program;;
+          *) sudo pacman -S $program;;
     esac
   fi
 }
@@ -69,7 +69,7 @@ if (type $prog | grep $regex)
 then
  echo "found $1:$2"
  return 0
-else 
+else
  echo "$1:$2 not found"
  return -1
 fi

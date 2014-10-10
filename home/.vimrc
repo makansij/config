@@ -1,8 +1,8 @@
 " vim: set sw=4 ts=4 sts=4 et tw=78 foldmarker={{{,}}} foldmethod=marker:
-"~/.vim/.vimrc.plugins
-"~/.vim/.vimrc.mappings
-"~/.vim/.vimrc.options
-"~/.vim/.vimrc.functions
+"~/.vimrc.plugins
+"~/.vimrc.mappings
+"~/.vimrc.options
+"~/.vimrc.functions
 
 " set mapleader here so one can define leader mappings in .vimrc.plugins
 let mapleader = ","
@@ -25,40 +25,36 @@ let maplocalleader = "\\"
         set nocompatible
         set runtimepath+=~/.vim/bundle/neobundle.vim/
     endif
-    call neobundle#rc(expand('~/.vim/bundle/'))
+    call neobundle#begin(expand('~/.vim/bundle/'))
 
     " Let NeoBundle manage NeoBundle
     NeoBundleFetch 'Shougo/neobundle.vim'
     " Recommended to install
-    NeoBundle 'Shougo/vimproc', {
-        \ 'build' : {
-        \     'windows' : 'make -f make_mingw32.mak',
-        \     'cygwin' : 'make -f make_cygwin.mak',
-        \     'mac' : 'make -f make_mac.mak',
-        \     'unix' : 'make -f make_unix.mak',
-        \    },
-        \ }
-    if filereadable(expand("~/.vim/.vimrc.plugins"))
-        source ~/.vim/.vimrc.plugins
+    "NeoBundle 'Shougo/vimproc', {
+    "    \ 'build' : {
+    "    \     'windows' : 'make -f make_mingw32.mak',
+    "    \     'cygwin' : 'make -f make_cygwin.mak',
+    "    \     'mac' : 'make -f make_mac.mak',
+    "    \     'unix' : 'make -f make_unix.mak',
+    "    \    },
+    "    \ }
+    if filereadable(expand("~/.vimrc.plugins"))
+        source ~/.vimrc.plugins
     endif
     syntax on
-    "filetype off " needed??
+    call neobundle#end()
     filetype plugin indent on     " Required!
     NeoBundleCheck
-    if !has('vim_starting')
-        " Call on_source hook when reloading .vimrc.
-        call neobundle#call_hook('on_source')
-    endif
 "}}}
 " include other vimrcs {{{
-if filereadable(expand("~/.vim/.vimrc.functions"))
-    source ~/.vim/.vimrc.functions
+if filereadable(expand("~/.vimrc.functions"))
+    source ~/.vimrc.functions
 endif
-if filereadable(expand("~/.vim/.vimrc.options"))
-    source ~/.vim/.vimrc.options
+if filereadable(expand("~/.vimrc.options"))
+    source ~/.vimrc.options
 endif
-if filereadable(expand("~/.vim/.vimrc.mappings"))
-    source ~/.vim/.vimrc.mappings
+if filereadable(expand("~/.vimrc.mappings"))
+    source ~/.vimrc.mappings
 endif
 "}}}
 " Autocommands {{{

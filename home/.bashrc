@@ -167,7 +167,7 @@
 #}}}
 export PATH="~/.bin:$PATH"
 export PATH="/usr/lib/colorgcc/bin:$PATH"
-export PATH="`ruby -rubygems -e 'puts Gem.user_dir'`/bin:$PATH"
+#export PATH="`ruby -rubygems -e 'puts Gem.user_dir'`/bin:$PATH"
 # If not running interactively, exit
 [ -z "$PS1" ] && return
 # If not running interactively, exit
