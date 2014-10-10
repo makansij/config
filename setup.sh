@@ -35,8 +35,9 @@ checkInstall xorg-server-utils
 if [ "$VBOX" = true ]; then
     checkInstall virtualbox-guest-modules
     checkInstall virtualbox-guest-utils
-    VBOX_MODS=$CONFIG_PATH/etc/modules-load.d/virtualbox.conf
-    if [ ! -L $VBOX_MODS ]; then
-        exesudo makeLink $VBOX_MODS /etc/modules-load.d
+    MODS_PATH=/etc/modules-load.d
+    if [ ! -L $MODS_PATH/virtualbox.conf ]; then
+        exesudo makeLink $CONFIG_PATH/etc/modules-load.d/virtualbox.conf $MODS_PATH
     fi
+    exesudo systemctl enable vboxservice
 fi
