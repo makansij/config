@@ -24,15 +24,16 @@ makeLink()
   if [ ! -e "$target" ]
   then
     echo "error: $target does not exist!"
-    return
+    return -1
   fi
-
-  if [ -e "$destination/$filename" ]
-  then
+  if [ -L "$destination/$filename" ]; then
+    return 0
+  fi
+  if [ -e "$destination/$filename" ]; then
     echo "$destination/$filename : file already exist!"
-    echo "unlink/delete and make new link? Y/n"
+    echo "delete and make link? Y/n"
 
-    read answer
+    read -n 1 answer
     case $answer in
       n*|N*) return ;;
           *) rm -r $destination/$filename;;
@@ -49,30 +50,30 @@ checkInstall()
   if pacman -Q $program > /dev/null 2>&1
   then
     echo "$program found"
-    return
+    return 0
   else
     echo "$program not found! install? Y/n"
-
-    read answer
+    read -n 1 answer
     case $answer in
-      n*|N*) return ;;
-          *) sudo pacman -S $program;;
+      n*|N*) return -1;;
+          *) sudo pacman -S $program
+             return 0;;
     esac
   fi
 }
 
 checkProgram()
 {
-local prog=$1
-local regex=$2
-if (type $prog | grep $regex)
-then
- echo "found $1:$2"
- return 0
-else
- echo "$1:$2 not found"
- return -1
-fi
+    local prog=$1
+    local regex=$2
+    if (type $prog | grep $regex)
+    then
+        echo "found $1:$2"
+        return 0
+    else
+        echo "$1:$2 not found"
+        return -1
+    fi
 }
 
 function exesudo ()

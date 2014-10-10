@@ -1,5 +1,6 @@
 #!/bin/sh
-
+## options
+VBOX=true
 CONFIG_PATH=$(dirname $(readlink -f $0))
 echo config_path=$CONFIG_PATH
 
@@ -12,7 +13,7 @@ fi
 source $SHELL_LIBRARY
 
 echo "make links? Y/n"
-read answer
+read -n 1 answer
 case $answer in
   n*|N*) ;;
       *) for f in $CONFIG_PATH/home/.[!.]*
@@ -23,8 +24,19 @@ case $answer in
          git clone https://github.com/Shougo/neobundle.vim $HOME/.vim/bundle/neobundle.vim
          ;;
 esac
-checkInstall awesome
+if checkInstall awesome; then
+    mkdir -p $HOME/.config
+    makeLink $CONFIG_PATH/.config/awesome $HOME/.config
+fi
 checkInstall xorg-server
 checkInstall xorg-xinit
 checkInstall xorg-utils
 checkInstall xorg-server-utils
+if [ "$VBOX" = true ]; then
+    checkInstall virtualbox-guest-modules
+    checkInstall virtualbox-guest-utils
+    VBOX_MODS=$CONFIG_PATH/etc/modules-load.d/virtualbox.conf
+    if [ ! -L $VBOX_MODS ]; then
+        exesudo makeLink $VBOX_MODS /etc/modules-load.d
+    fi
+fi
