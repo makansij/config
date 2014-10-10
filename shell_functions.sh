@@ -26,18 +26,18 @@ makeLink()
     echo "error: $target does not exist!"
     return -1
   fi
-  if [ -L "$destination/$filename" ]; then
-    return 0
+  if [ -L "$destination/$filename" ]; then 
+      echo "unlinking $destination/$filename"
+      unlink $destination/$filename
   fi
   if [ -e "$destination/$filename" ]; then
-    echo "$destination/$filename : file already exist!"
-    echo "delete and make link? Y/n"
-
-    read -n 1 answer
-    case $answer in
-      n*|N*) return ;;
-          *) rm -r $destination/$filename;;
-    esac
+      echo "$destination/$filename : file already exist!"
+      echo "delete and make link? Y/n"
+      read -n 1 answer
+      case $answer in
+        n*|N*) return ;;
+            *) rm -r $destination/$filename;;
+      esac
   fi
 
   ln -s $target $destination/$filename
@@ -47,7 +47,7 @@ makeLink()
 checkInstall()
 {
   local program=$1
-  if pacman -Q $program > /dev/null 2>&1
+  if yaourt -Q $program > /dev/null 2>&1
   then
     echo "$program found"
     return 0
@@ -56,7 +56,7 @@ checkInstall()
     read -n 1 answer
     case $answer in
       n*|N*) return -1;;
-          *) sudo pacman -S $program
+          *) yaourt -S $program
              return 0;;
     esac
   fi
