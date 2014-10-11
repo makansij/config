@@ -49,6 +49,23 @@ case $answer in
 	 done
          ;;
 esac
+if checkInstall git; then
+    git config --global push.default simple
+    git config --global user.name "jandob"
+    git config --global user.email "***REMOVED***"
+fi
+if checkInstall encfs; then
+    if [ ! -e $HOME/.encfspassword ]; then
+        echo "WARNING: please add .encfspassword to home folder and rerun"
+    else
+        if [ ! -e $HOME/.encfs ]; then
+            git clone https://github.com/jandob/encfs $CONFIG_PATH/../encfs
+            cat ~/.encfspassword | encfs -S $CONFIG_PATH/../encfs/ ~/.encfs/ &
+        fi
+        makeLink $HOME/.encfs/.ssh $HOME
+    fi
+fi
+
 if checkInstall openssh; then
     ssh-add $HOME/.ssh/id_rsa
 fi

@@ -19,7 +19,7 @@ xbindkeys &
 #setxkbmap -option grp:shifts_toggle,grp_led:scroll us,de
 
 dropbox start &
-cat ~/.encfspassword | encfs -S ~/Dropbox/.encfs/ ~/Dropbox.encfs/ &
+cat ~/.encfspassword | encfs -S ~/git/encfs/ ~/.encfs/ &
 if lspci | grep VirtualBox; then
     VBoxClient-all &
 fi
