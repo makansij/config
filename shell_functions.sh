@@ -26,7 +26,7 @@ makeLink()
     echo "error: $target does not exist!"
     return -1
   fi
-  if [ -L "$destination/$filename" ]; then 
+  if [ -L "$destination/$filename" ]; then
       echo "unlinking $destination/$filename"
       unlink $destination/$filename
   fi
@@ -47,7 +47,7 @@ makeLink()
 checkInstall()
 {
   local program=$1
-  if yaourt -Q $program > /dev/null 2>&1
+  if yaourt -Q $program > /dev/null 2>&1 || type $program >/dev/null 2>&1
   then
     echo "$program found"
     return 0

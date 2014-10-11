@@ -1,7 +1,9 @@
 #!/bin/sh
 
 ## OPTIONS
-VBOX=true
+if lspci | grep VirtualBox; then
+    VBOX=true
+fi
 
 ## VARIABLES
 ARCHLINUX_FR_SERVER=$(cat <<\EOF
@@ -37,6 +39,7 @@ if ! pacman -Qg base-devel > /dev/null 2>&1; then
 fi
 
 checkInstall vim
+exesudo makeLink ./etc/cron.hourly/pacmansync /etc/cron.hourly
 
 echo "make links? Y/n"
 read -n 1 answer
@@ -56,19 +59,17 @@ esac
 if checkInstall awesome; then
     checkInstall xorg-server
     checkInstall xorg-xinit
-    checkInstall xorg-utils
-    checkInstall xorg-server-utils
-    checkInstall vicious
+    #checkInstall xorg-utils
+    #checkInstall xorg-server-utils
     checkInstall xterm
     checkInstall ttf-dejavu
+    checkInstall vicious
     mkdir -p $HOME/.config
     makeLink $CONFIG_PATH/.config/awesome $HOME/.config
 fi
 if checkInstall openbox; then
     checkInstall xorg-server
     checkInstall xorg-xinit
-    checkInstall xorg-utils
-    checkInstall xorg-server-utils
     checkInstall xterm
     checkInstall ttf-dejavu
     checkInstall obconf

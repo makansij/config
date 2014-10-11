@@ -1,0 +1,11 @@
+#!/bin/sh
+
+#
+# paranoia settings
+#
+umask 022
+PATH=/sbin:/bin:/usr/sbin:/usr/bin
+export PATH
+
+pacman -Sy 1>/dev/null 2>&1
+exit 0
