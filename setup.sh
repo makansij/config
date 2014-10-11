@@ -38,8 +38,6 @@ if ! pacman -Qg base-devel > /dev/null 2>&1; then
     sudo pacman -S base-devel
 fi
 
-checkInstall vim
-exesudo makeLink ./etc/cron.hourly/pacmansync /etc/cron.hourly
 
 echo "make links? Y/n"
 read -n 1 answer
@@ -49,12 +47,16 @@ case $answer in
 	 do
 	   makeLink $f $HOME
 	 done
-         if [ ! -e $HOME/.vim/bundle/ ];then
-            mkdir -p $HOME/.vim/bundle
-            git clone https://github.com/Shougo/neobundle.vim $HOME/.vim/bundle/neobundle.vim
-         fi
          ;;
 esac
+
+if checkInstall vim; then
+    if [ ! -e $HOME/.vim/bundle/ ];then
+        mkdir -p $HOME/.vim/bundle
+        git clone https://github.com/Shougo/neobundle.vim $HOME/.vim/bundle/neobundle.vim
+    fi
+fi
+exesudo makeLink ./etc/cron.hourly/pacmansync /etc/cron.hourly
 
 if checkInstall awesome; then
     checkInstall xorg-server
