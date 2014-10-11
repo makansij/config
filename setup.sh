@@ -39,21 +39,16 @@ if ! pacman -Qg base-devel > /dev/null 2>&1; then
 fi
 
 
-echo "make links? Y/n"
-read -n 1 answer
-case $answer in
-  n*|N*) ;;
-      *) for f in $CONFIG_PATH/home/.[!.]*
-	 do
-	   makeLink $f $HOME
-	 done
-         ;;
-esac
+for f in $CONFIG_PATH/home/.[!.]*; do
+    makeLink $f $HOME
+done
+
 if checkInstall git; then
     git config --global push.default simple
     git config --global user.name "jandob"
     git config --global user.email "***REMOVED***"
 fi
+
 if checkInstall encfs; then
     if [ ! -e $HOME/.encfspassword ]; then
         echo "WARNING: please add .encfspassword to home folder and rerun"
