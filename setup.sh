@@ -61,15 +61,21 @@ if checkInstall encfs; then
         if [ ! -e $HOME/.encfs ]; then
             mkdir -p $HOME/.encfs
             git clone https://github.com/jandob/encfs $CONFIG_PATH/../encfs
-            cat ~/.encfspassword | encfs -S $CONFIG_PATH/../encfs/ ~/.encfs/ &
+            cat ~/.encfspassword | encfs -S $CONFIG_PATH/../encfs/ ~/.encfs/
         fi
         makeLink $HOME/.encfs/.ssh $HOME
+        if checkInstall openssh; then
+            ssh-add $HOME/.ssh/id_rsa
+            CWD=$(pwd)
+            cd $CONFIG_PATH/../encfs
+            git remote set-url origin git@github.com:jandob/encfs.git
+            cd $CONFIG_PATH/
+            git remote set-url origin git@github.com:jandob/config.git
+            cd $dir
+        fi
     fi
 fi
 
-if checkInstall openssh; then
-    ssh-add $HOME/.ssh/id_rsa
-fi
 
 if checkInstall vim; then
     if [ ! -e $HOME/.vim/bundle/ ];then
@@ -80,7 +86,7 @@ if checkInstall vim; then
     makeLink $HOME/.encfs/wiki $HOME/.vim
 fi
 if checkInstall cronie; then
-    exesudo makeLink ./etc/cron.hourly/pacmansync /etc/cron.hourly
+    exesudo makeLink $CONFIG_PATH/etc/cron.hourly/pacmansync /etc/cron.hourly
 fi
 
 if checkInstall awesome; then
