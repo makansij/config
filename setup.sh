@@ -59,6 +59,7 @@ if checkInstall encfs; then
         echo "WARNING: please add .encfspassword to home folder and rerun"
     else
         if [ ! -e $HOME/.encfs ]; then
+            mkdir -p $HOME/.encfs
             git clone https://github.com/jandob/encfs $CONFIG_PATH/../encfs
             cat ~/.encfspassword | encfs -S $CONFIG_PATH/../encfs/ ~/.encfs/ &
         fi
@@ -75,6 +76,8 @@ if checkInstall vim; then
         mkdir -p $HOME/.vim/bundle
         git clone https://github.com/Shougo/neobundle.vim $HOME/.vim/bundle/neobundle.vim
     fi
+    makeLink $CONFIG_PATH/bundle.local $HOME/.vim
+    makeLink $HOME/.encfs/wiki $HOME/.vim
 fi
 if checkInstall cronie; then
     exesudo makeLink ./etc/cron.hourly/pacmansync /etc/cron.hourly
