@@ -245,7 +245,7 @@ pac_rem_orphans() {
       sudo pacman -Rs $(pacman -Qdtq)
   fi
 }
-
+ssh-add -l >/dev/null || alias ssh='ssh-add -l >/dev/null || ssh-add && unalias ssh; ssh'
 alias archstartsshdeamon='systemctl enable sshd.service'
 alias tunneltouni='ssh -N -R 10042:localhost:22 doblerj@login.informatik.uni-freiburg.de'
 #alias tunnelconnect='ssh h4ct1c@localhost -p 10042'

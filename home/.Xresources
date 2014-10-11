@@ -13,7 +13,7 @@ XTerm*locale: true
 !*VT100.font2                  : -*-lucida-medium-r-*-*-*-*-*-*-*-*-iso8859-*
 !*VT100.font3                  : -*-dejavu sans-medium-r-*-*-*-*-*-*-*-*-iso8859-*
 Xcursor.theme                 : Human
-!xterm.selectToClipboard : 1
+xterm.selectToClipboard : 1
 !truetypefonts; for a list: fc-list :fontformat=TrueType -f "%{family}\n" | sort -u | less
 !xterm*faceName:             Terminus:style=Regular
 !xterm*faceName:             Arial:style=Regular

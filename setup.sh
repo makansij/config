@@ -1,7 +1,7 @@
 #!/bin/sh
 
 ## OPTIONS
-if lspci | grep VirtualBox; then
+if lspci | grep VirtualBox >/dev/null; then
     VBOX=true
 fi
 
@@ -49,6 +49,9 @@ case $answer in
 	 done
          ;;
 esac
+if checkInstall openssh; then
+    ssh-add $HOME/.ssh/id_rsa
+fi
 
 if checkInstall vim; then
     if [ ! -e $HOME/.vim/bundle/ ];then
@@ -56,7 +59,9 @@ if checkInstall vim; then
         git clone https://github.com/Shougo/neobundle.vim $HOME/.vim/bundle/neobundle.vim
     fi
 fi
-exesudo makeLink ./etc/cron.hourly/pacmansync /etc/cron.hourly
+if checkInstall cronie; then
+    exesudo makeLink ./etc/cron.hourly/pacmansync /etc/cron.hourly
+fi
 
 if checkInstall awesome; then
     checkInstall xorg-server
