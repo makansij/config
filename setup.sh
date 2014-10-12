@@ -44,7 +44,6 @@ fi
 for f in $CONFIG_PATH/home/.[!.]*; do
     makeLink $f $HOME
 done
-checkInstall polkit
 if checkInstall git; then
     git config --global push.default simple
     git config --global user.name "jandob"
