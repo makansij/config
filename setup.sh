@@ -44,7 +44,7 @@ fi
 for f in $CONFIG_PATH/home/.[!.]*; do
     makeLink $f $HOME
 done
-
+checkInstall polkit
 if checkInstall git; then
     git config --global push.default simple
     git config --global user.name "jandob"
@@ -57,7 +57,7 @@ if [ "$VBOX" = true ]; then
     MODS_PATH=/etc/modules-load.d
     exesudo makeLink $CONFIG_PATH/etc/modules-load.d/virtualbox.conf $MODS_PATH
     exesudo systemctl enable vboxservice
-    sudo usermod -aG vboxsf h4ct1c
+    sudo usermod -aG vboxsf $(whoami)
 fi
 
 if checkInstall encfs; then
