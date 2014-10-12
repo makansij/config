@@ -46,8 +46,14 @@ for f in $CONFIG_PATH/home/.[!.]*; do
 done
 if checkInstall git; then
     git config --global push.default simple
-    git config --global user.name "jandob"
-    git config --global user.email "***REMOVED***"
+    if ! git config --global --get user.name; then
+        echo "please enter git username:"
+        read name
+        git config --global user.name "$name"
+        echo "please enter git email:"
+        read mail
+        git config --global user.email "$mail"
+    fi
 fi
 
 if [ "$VBOX" = true ]; then
