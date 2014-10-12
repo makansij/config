@@ -37,7 +37,7 @@ if ! pacman -Q yaourt > /dev/null 2>&1; then
     sudo pacman -S yaourt
 fi
 
-if ! pacman -Qg base-devel > /dev/null 2>&1; then
+if ! pacman -Q fakeroot > /dev/null 2>&1; then
     sudo pacman -S base-devel
 fi
 checkInstall bash-completion

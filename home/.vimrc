@@ -26,24 +26,16 @@ let maplocalleader = "\\"
         set runtimepath+=~/.vim/bundle/neobundle.vim/
     endif
     call neobundle#begin(expand('~/.vim/bundle/'))
-
     " Let NeoBundle manage NeoBundle
     NeoBundleFetch 'Shougo/neobundle.vim'
-    " Recommended to install
-    "NeoBundle 'Shougo/vimproc', {
-    "    \ 'build' : {
-    "    \     'windows' : 'make -f make_mingw32.mak',
-    "    \     'cygwin' : 'make -f make_cygwin.mak',
-    "    \     'mac' : 'make -f make_mac.mak',
-    "    \     'unix' : 'make -f make_unix.mak',
-    "    \    },
-    "    \ }
+    syntax on
     if filereadable(expand("~/.vimrc.plugins"))
         source ~/.vimrc.plugins
     endif
-    syntax on
     call neobundle#end()
     filetype plugin indent on     " Required!
+    " TODO move to .vimrc.plugins if bug is fixed
+    colorscheme hybrid
     NeoBundleCheck
 "}}}
 " include other vimrcs {{{

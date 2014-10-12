@@ -511,7 +511,8 @@ if count(g:my_bundle_groups, 'colors') "{{{
     NeoBundle 'sjl/badwolf'
     NeoBundle 'zeis/vim-kolor'
     let g:hybrid_use_Xresources = 1
-    colorscheme hybrid
+    " TODO uncomment if neobundle bug is fixed
+    "colorscheme hybrid
 endif "}}}
 if count(g:my_bundle_groups, 'syntax') "{{{
     NeoBundle 'django.vim'
