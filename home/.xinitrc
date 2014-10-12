@@ -28,9 +28,9 @@ fi
 #exec gnome-session
 #exec startkde
 #exec startxfce4
-if type openbox-session > /dev/null 2>&1; then
-    exec openbox-session
-elif type awesome > /dev/null 2>&1; then
+if type awesome > /dev/null 2>&1; then
     exec awesome
+elif type openbox-session > /dev/null 2>&1; then
+    exec openbox-session
 fi
 # exec qtile
