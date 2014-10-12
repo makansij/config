@@ -56,6 +56,8 @@ if [ "$VBOX" = true ]; then
     checkInstall virtualbox-guest-utils
     MODS_PATH=/etc/modules-load.d
     exesudo makeLink $CONFIG_PATH/etc/modules-load.d/virtualbox.conf $MODS_PATH
+    sudo mkdir /media
+    exesudo systemctl start vboxservice
     exesudo systemctl enable vboxservice
     sudo usermod -aG vboxsf $(whoami)
 fi
