@@ -51,9 +51,20 @@ if checkInstall git; then
     git config --global user.email "***REMOVED***"
 fi
 
+if [ "$VBOX" = true ]; then
+    checkInstall virtualbox-guest-modules
+    checkInstall virtualbox-guest-utils
+    MODS_PATH=/etc/modules-load.d
+    exesudo makeLink $CONFIG_PATH/etc/modules-load.d/virtualbox.conf $MODS_PATH
+    exesudo systemctl enable vboxservice
+    sudo usermod -aG vboxsf h4ct1c
+fi
+
 if checkInstall encfs; then
     if [ ! -e $HOME/.encfspassword ]; then
         echo "WARNING: please add .encfspassword to home folder and rerun"
+        echo "You probably need to reboot before filesharing with the host works"
+        exit 0
     else
         if [ ! -e $HOME/.encfs ]; then
             mkdir -p $HOME/.encfs
@@ -106,12 +117,4 @@ if checkInstall openbox; then
     checkInstall obmenu
     mkdir -p $HOME/.config
     makeLink $CONFIG_PATH/.config/openbox $HOME/.config
-fi
-if [ "$VBOX" = true ]; then
-    checkInstall virtualbox-guest-modules
-    checkInstall virtualbox-guest-utils
-    MODS_PATH=/etc/modules-load.d
-    exesudo makeLink $CONFIG_PATH/etc/modules-load.d/virtualbox.conf $MODS_PATH
-    exesudo systemctl enable vboxservice
-    sudo usermod -aG vboxsf
 fi
