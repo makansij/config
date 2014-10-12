@@ -24,20 +24,22 @@ then
   exit 1
 fi
 source $SHELL_LIBRARY
+
 if ! pacman -Q sudo > /dev/null 2>&1; then
-    echo "please install sudo first!"
+    echo "please install and configure sudo first!"
     exit 1
 fi
+
 if ! pacman -Q yaourt > /dev/null 2>&1; then
     echo "adding archlinuxfr repo to pacman.conf"
     echo "$ARCHLINUX_FR_SERVER" | sudo tee --append /etc/pacman.conf
     sudo pacman -Syu
     sudo pacman -S yaourt
 fi
+
 if ! pacman -Qg base-devel > /dev/null 2>&1; then
     sudo pacman -S base-devel
 fi
-
 
 for f in $CONFIG_PATH/home/.[!.]*; do
     makeLink $f $HOME
@@ -111,4 +113,5 @@ if [ "$VBOX" = true ]; then
     MODS_PATH=/etc/modules-load.d
     exesudo makeLink $CONFIG_PATH/etc/modules-load.d/virtualbox.conf $MODS_PATH
     exesudo systemctl enable vboxservice
+    sudo usermod -aG vboxsf
 fi
