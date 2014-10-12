@@ -40,7 +40,7 @@ fi
 if ! pacman -Qg base-devel > /dev/null 2>&1; then
     sudo pacman -S base-devel
 fi
-
+checkInstall bash-completion
 for f in $CONFIG_PATH/home/.[!.]*; do
     makeLink $f $HOME
 done
@@ -101,8 +101,8 @@ fi
 if checkInstall awesome; then
     checkInstall xorg-server
     checkInstall xorg-xinit
-    #checkInstall xorg-utils
-    #checkInstall xorg-server-utils
+    checkInstall xorg-utils
+    checkInstall xorg-server-utils
     checkInstall xterm
     checkInstall ttf-dejavu
     checkInstall vicious
@@ -112,6 +112,8 @@ fi
 if checkInstall openbox; then
     checkInstall xorg-server
     checkInstall xorg-xinit
+    checkInstall xorg-utils
+    checkInstall xorg-server-utils
     checkInstall xterm
     checkInstall ttf-dejavu
     checkInstall obconf
