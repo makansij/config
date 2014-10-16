@@ -28,15 +28,28 @@ let maplocalleader = "\\"
     call neobundle#begin(expand('~/.vim/bundle/'))
     " Let NeoBundle manage NeoBundle
     NeoBundleFetch 'Shougo/neobundle.vim'
-    syntax on
-    if filereadable(expand("~/.vimrc.plugins"))
+    NeoBundle 'Shougo/vimproc', {
+        \ 'build' : {
+        \     'windows' : 'make -f make_mingw32.mak',
+        \     'cygwin' : 'make -f make_cygwin.mak',
+        \     'mac' : 'make -f make_mac.mak',
+        \     'unix' : 'make -f make_unix.mak',
+        \    },
+        \ }
+    if filereadable(expand('~/.vimrc.plugins'))
         source ~/.vimrc.plugins
     endif
     call neobundle#end()
     filetype plugin indent on     " Required!
     " TODO move to .vimrc.plugins if bug is fixed
+    syntax enable
     colorscheme hybrid
     NeoBundleCheck
+	if !has('vim_starting')
+	  " Call on_source hook when reloading .vimrc.
+	  call neobundle#call_hook('on_source')
+	endif
+
 "}}}
 " include other vimrcs {{{
 if filereadable(expand("~/.vimrc.functions"))

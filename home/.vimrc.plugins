@@ -408,10 +408,10 @@ if count(g:my_bundle_groups, 'unite') "{{{
     NeoBundle 'Shougo/vimfiler.vim'
         let g:vimfiler_as_default_explorer = 1
     " sources
-    NeoBundle 'kmnk/vim-unite-svn.git'
-    NeoBundle 'h1mesuke/unite-outline'
+    "NeoBundle 'kmnk/vim-unite-svn.git'
+    "NeoBundle 'h1mesuke/unite-outline'
     NeoBundle 'tsukkee/unite-help'
-    NeoBundle 'klen/unite-radio.vim.git'
+    "NeoBundle 'klen/unite-radio.vim.git'
     " Playlists {{{
         function! FindPlaylists(dir)
             let l:files = system("find ".expand(a:dir)." -name *.m3u -print")
