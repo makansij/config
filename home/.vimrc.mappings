@@ -20,6 +20,7 @@ inoremap <F2> <c-o>:call ListToggle()<CR>
 
 " copy to clipboard
 noremap <silent> <F3> "+y
+vmap <silent> <F3> :!xclip -f -sel clip<CR>u
 
 " paste from clipboard
 nnoremap <silent> <F4> :set paste<CR>"+gp :set nopaste<CR>
